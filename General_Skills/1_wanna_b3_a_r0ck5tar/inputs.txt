@@ -1,0 +1,6 @@
+# music needs to be == 136 (If the music is a guitar)
+136
+# (If the rhythm without Music is nothing)
+# Means that if rhythm - Music(1970) = NULL(0)
+1970
+
