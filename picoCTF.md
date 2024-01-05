@@ -947,30 +947,30 @@ if [ $# != 3 ]
 then
   echo "Read the code first"
 else
-	if [[ "$1" == "add" ]]
-	then
-	  sum=$(( $2 + $3 ))
-	  echo "The Sum is: $sum"
+    if [[ "$1" == "add" ]]
+    then
+      sum=$(( $2 + $3 ))
+      echo "The Sum is: $sum"
 
-	elif [[ "$1" == "sub" ]]
-	then
-	  sub=$(( $2 - $3 ))
-	  echo "The Substract is: $sub"
+    elif [[ "$1" == "sub" ]]
+    then
+      sub=$(( $2 - $3 ))
+      echo "The Substract is: $sub"
 
-	elif [[ "$1" == "div" ]]
-	then
-	  div=$(( $2 / $3 ))
-	  echo "The quotient is: $div"
+    elif [[ "$1" == "div" ]]
+    then
+      div=$(( $2 / $3 ))
+      echo "The quotient is: $div"
 
-	elif [[ "$1" == "mul" ]]
-	then
-	  mul=$(( $2 * $3 ))
-	  echo "The product is: $mul"
+    elif [[ "$1" == "mul" ]]
+    then
+      mul=$(( $2 * $3 ))
+      echo "The product is: $mul"
 
-	else
-	  echo "Read the manual"
-	
-	fi
+    else
+      echo "Read the manual"
+
+    fi
 fi
 ```
 
@@ -1115,3 +1115,341 @@ Nice, challenge finished!
 ---
 
 ## Reverse Engineering
+
+Looks Nice!
+
+---
+
+In this challenge we only got one file `keygenme-trial.py` which is a little application that calculate things that we don't need to know about because the interesting part in this script is how to **activate the license**.
+
+The variables used to verify the license are these:
+
+```python
+username_trial = "GOUGH"
+bUsername_trial = b"GOUGH"
+
+key_part_static1_trial = "picoCTF{1n_7h3_|<3y_of_"
+key_part_dynamic1_trial = "xxxxxxxx"
+key_part_static2_trial = "}"
+key_full_template_trial = key_part_static1_trial + key_part_dynamic1_trial + key_part_static2_trial
+```
+
+Here, we can see that there is the beginning of the flag but there is a **part with 'x' that we are gonna try to find**.
+
+When you try to activate a licence, it first call this function `enter_license`.
+
+```python
+def enter_license():
+    user_key = input("\nEnter your license key: ")
+    user_key = user_key.strip()
+
+    global bUsername_trial
+
+    if check_key(user_key, bUsername_trial):
+        decrypt_full_version(user_key)
+    else:
+        print("\nKey is NOT VALID. Check your data entry.\n\n")
+```
+
+So this wait for an input of the user, `strip` it and now call `check_key`.
+
+```python
+def check_key(key, username_trial):
+    global key_full_template_trial
+
+    if len(key) != len(key_full_template_trial):
+        return False
+    else:
+        # Verify if the start of our input is "picoCTF{1n_7h3_|<3y_of_"
+        i = 0
+        for c in key_part_static1_trial:
+            if key[i] != c:
+                return False
+            i += 1
+
+        # ... (Some other code that I'm gonna explain later)         
+
+        return True
+```
+
+With this function, we first notice that our input (`key`) need to have a size equal to the size of `key_full_template_trial` which is the flag but with unknown part (the `key_part_dynamic1_trial`, all the 'x').
+
+Then the rest of the code here is verify if the start of our input is the string `key_part_static1_trial` which is "picoCTF{1n_7h3_|<3y_of_".
+
+The rest of this function is gonna help us find what the rest of our input needs to be.
+
+```python
+  def check_key(key, username_trial):
+
+        # ...
+
+        if key[i] != hashlib.sha256(username_trial).hexdigest()[4]:
+            return False
+        else:
+            i += 1
+        if key[i] != hashlib.sha256(username_trial).hexdigest()[5]:
+            return False
+        else:
+            i += 1
+        if key[i] != hashlib.sha256(username_trial).hexdigest()[3]:
+            return False
+        else:
+            i += 1
+        if key[i] != hashlib.sha256(username_trial).hexdigest()[6]:
+            return False
+        else:
+            i += 1
+        if key[i] != hashlib.sha256(username_trial).hexdigest()[2]:
+            return False
+        else:
+            i += 1
+        if key[i] != hashlib.sha256(username_trial).hexdigest()[7]:
+            return False
+        else:
+            i += 1
+        if key[i] != hashlib.sha256(username_trial).hexdigest()[1]:
+            return False
+        else:
+            i += 1
+        if key[i] != hashlib.sha256(username_trial).hexdigest()[8]:
+            return False
+
+        return True
+```
+
+We know that the `i` variable is now equal to the lenght of `key_part_static1_trial` which is the rest of our string after "picoCTF{1n_7h3_|<3y_of_".
+
+So this part check things on the section of the flag that contain 'x'.
+
+Each `if` statement is similar to the other one, it verify if the next character is equal to one precise character of the sha256 of `username_trial` which is `bUsername_trial` (the binary string "GOUGH").
+
+First, we need to know the value of `hashlib.sha256(username_trial).hexdigest()`, fo this, just print it when the program call `check_key`.
+
+We now know the value of it : `e8a1f9146d32473b9605568ca66f7b5c2db9f271f57a8c8e9e121e48accddf2f`.
+
+The first value of the rest of the flag can be found here:
+
+```python
+if key[i] != hashlib.sha256(username_trial).hexdigest()[4]:
+    return False
+else:
+    i += 1
+```
+
+It is the 5 value (don't forget that it starts from 0) of the hashed string we got earlier, so it is a 'f'.
+
+We can continue this process for the rest of the function and get the flag!
+
+---
+
+### crackme-py
+
+This challenge  contain a useless program that choose the greatest value between two, but there is also en encoded string (`bezos_cc_secret`) and a decode function (`decode_secret`). If we call the decode function with the encoded string we can get the flag.
+
+---
+
+### file-run1
+
+In this challenge we got one file `run`. After downloading this file we have to give us the permission to run it using `chmod`:
+
+```shell
+chmod +x run
+```
+
+And then we can run the script to optain the flag.
+
+---
+
+### file-run2
+
+For this challenge we got one file `run`.After downloading this file we have to give us the permission to run it using `chmod`:
+
+```shell
+chmod +x run
+```
+
+And then we can run the script and get the following result:
+
+```shell
+$ ./run
+Run this file with only one argument.
+```
+
+This give us the information that we have to run the script with one argument. Let's try:
+
+```shell
+$ ./run abc
+Won't you say 'Hello!' to me first?
+```
+
+I guess we have to run the script with the argument `Hello!`:
+
+```shell
+$ ./run Hello!
+The flag is: The flag :)
+```
+
+We got the flag!
+
+--- 
+
+### patchme.py
+
+For this challenge we get an encrypted flag and a python program that contain a function called `level_1_pw_check` that we are gonna analyse.
+
+```python
+# ...
+
+def level_1_pw_check():
+    user_pw = input("Please enter correct password for flag: ")
+    if( user_pw == "ak98" + \
+                   "-=90" + \
+                   "adfjhgj321" + \
+                   "sleuth9000"):
+        print("Welcome back... your flag, user:")
+        decryption = str_xor(flag_enc.decode(), "utilitarian")
+        print(decryption)
+        return
+    print("That password is incorrect")
+
+level_1_pw_check()
+```
+
+This function is waiting for an input and then verify if it match with the wanted password.
+
+Our input must be the same as :
+
+```python
+"ak98" + \
+"-=90" + \
+"adfjhgj321" + \
+"sleuth9000"
+```
+
+This is just a concatenation of these strings, so the input must be `ak98-=90adfjhgj321sleuth9000`.
+
+Let's try it:
+
+```bash
+$ py patchme.flag.py
+Please enter correct password for flag: ak98-=90adfjhgj321sleuth9000
+Welcome back... your flag, user:
+The flag :)
+```
+
+We got it!
+
+---
+
+### Safe Opener
+
+For this challenge, one file is given and we need to analyse it:
+
+**SafeOpener.java**
+
+```java
+import java.io.*;
+import java.util.*;
+public class SafeOpener {
+    public static void main(String args[]) throws IOException {
+        BufferedReader keyboard = new BufferedReader(new InputStreamReader(System.in));
+        Base64.Encoder encoder = Base64.getEncoder();
+        String encodedkey = "";
+        String key = "";
+        int i = 0;
+        boolean isOpen;
+
+
+        while (i < 3) {
+            System.out.print("Enter password for the safe: ");
+            key = keyboard.readLine();
+
+            encodedkey = encoder.encodeToString(key.getBytes());
+            System.out.println(encodedkey);
+
+            isOpen = openSafe(encodedkey);
+            if (!isOpen) {
+                System.out.println("You have  " + (2 - i) + " attempt(s) left");
+                i++;
+                continue;
+            }
+            break;
+        }
+    }
+
+    public static boolean openSafe(String password) {
+        String encodedkey = "cGwzYXMzX2wzdF9tM18xbnQwX3RoM19zYWYz";
+
+        if (password.equals(encodedkey)) {
+            System.out.println("Sesame open");
+            return true;
+        }
+        else {
+            System.out.println("Password is incorrect\n");
+            return false;
+        }
+    }
+}
+```
+
+We have to analyse the first lines of the code after the main method:
+
+```java
+BufferedReader keyboard = new BufferedReader(new InputStreamReader(System.in));
+Base64.Encoder encoder = Base64.getEncoder();
+String encodedkey = "";
+String key = "";
+int i = 0;
+boolean isOpen;
+```
+
+We can find that `encoder` is a base 64 encoder.
+
+Now let's analyse the rest of the method:
+
+```java
+while (i < 3) {
+    System.out.print("Enter password for the safe: ");
+    key = keyboard.readLine();
+
+    encodedkey = encoder.encodeToString(key.getBytes());
+    System.out.println(encodedkey);
+
+    isOpen = openSafe(encodedkey);
+    if (!isOpen) {
+        System.out.println("You have  " + (2 - i) + " attempt(s) left");
+        i++;
+        continue;
+    }
+    break;
+}
+```
+
+The part of the code wait for an input, encode it with base 64 (`encoder` is a base 64 encoder), and then call the `openSafe` function with the encoded input and return `true` if it open and `false` if it don't. The next step is to analyse the `openSafe` function.
+
+```java
+public static boolean openSafe(String password) {
+    String encodedkey = "cGwzYXMzX2wzdF9tM18xbnQwX3RoM19zYWYz";
+
+    if (password.equals(encodedkey)) {
+        System.out.println("Sesame open");
+        return true;
+    }
+    else {
+        System.out.println("Password is incorrect\n");
+        return false;
+    }
+}
+```
+
+This function has a string called `encodedkey` and is gonna verify if the string `password` given in argument is equal to `encodedkey`.
+
+We have to do some Reverse Engineering with the code.
+
+The `main` method take our input and encode it with base 64 and then the  `openSafe` function verify if the encoded input is equal to `encodedkey`. To make them match we have to decode `encodedkey` and put it as the input.
+
+The decoded version of `encodedkey` is : `"pl3as3_l3t_m3_1nt0_th3_saf3"`.
+
+We now got the password!
+
+---
