@@ -1453,3 +1453,66 @@ The decoded version of `encodedkey` is : `"pl3as3_l3t_m3_1nt0_th3_saf3"`.
 We now got the password!
 
 ---
+
+### unpackme.py
+
+For this challenge we get one file `unpackme.flag.py` that contain this code:
+
+**unpackme.flag.py**
+
+```python
+import base64
+from cryptography.fernet import Fernet
+
+
+
+payload = b'gAAAAABkzWGSzE6VQNTzvRXOXekQeW4CY6NiRkzeImo9LuYBHAYw_hagTJLJL0c-kmNsjY33IUbU2IWlqxA3Fpp9S7RxNkiwMDZgLmRlI9-lGAEW-_i72RSDvylNR3QkpJW2JxubjLUC5VwoVgH62wxDuYu1rRD5KadwTADdABqsx2MkY6fKNTMCYY09Se6yjtRBftfTJUL-LKz2bwgXNd6O-WpbfXEMvCv3gNQ7sW4pgUnb-gDVZvrLNrug_1YFaIe3yKr0Awo0HIN3XMdZYpSE1c9P4G0sMQ=='
+
+key_str = 'correctstaplecorrectstaplecorrec'
+key_base64 = base64.b64encode(key_str.encode())
+f = Fernet(key_base64)
+plain = f.decrypt(payload)
+exec(plain.decode())
+```
+
+We got a payload, and a few lines that do different things and then we got the `exec` function that execute python code. And when you try to run the script it wait for an input, meaning that the `plain` variable contain python code as a string. We can print it to see what's inside and we can see the python code and the flag!
+
+---
+
+### ARMassembly 0
+
+I achieved this challenge by following [this](https://mariokartwii.com/armv8/) tutorial and understanding the main part of the program and then convert the given numbers into hex and got the flag.
+
+---
+
+### Ready Gladiator 0
+
+In this challenge we have to send a warrior to the server using `nc` and lose all our rounds.
+
+The starting warior is this one:
+
+**imp.red**
+
+```
+;redcode
+;name Imp Ex
+;assert 1
+mov 0, 1
+end
+```
+
+Just try to play with the mov values and you easily get the flag.
+
+---
+
+### Reverse
+
+Before searching too deep, just try to look at the content of a file :).
+
+---
+
+### Safe Opener 2
+
+Just use the find or cat command!!!
+
+---
