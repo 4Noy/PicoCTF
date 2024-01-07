@@ -2,6 +2,8 @@
 
 ---
 
+
+
 ## General Skills
 
 ---
@@ -1114,6 +1116,8 @@ Nice, challenge finished!
 
 ---
 
+ 
+
 ## Reverse Engineering
 
 Looks Nice!
@@ -1513,6 +1517,52 @@ Before searching too deep, just try to look at the content of a file :).
 
 ### Safe Opener 2
 
-Just use the find or cat command!!!
+Just use the grep or cat command!!!
+
+---
+
+
+
+## Cryptography
+
+Math knowledge is nice for this section
+
+---
+
+### Mod 26
+
+For this challenge we get this encrypted flag : ``cvpbPGS{arkg_gvzr_V'yy_gel_2_ebhaqf_bs_ebg13_GYpXOHqX}`` and the challenge talk about ROT13, so let's write a little python algorithm that decrypt this flag!
+
+```python
+def rot13(s):
+    result = ""
+    for v in s:
+        c = ord(v)
+
+        if c >= ord('a') and c <= ord('z'):
+            if c > ord('m'):
+                c -= 13
+            else:
+                c += 13
+
+        elif c >= ord('A') and c <= ord('Z'):
+            if c > ord('M'):
+                c -= 13
+            else:
+                c += 13
+
+        result += chr(c)
+
+    return result
+# The encrypted flag is in the "flag.enc.txt" file
+with open('flag.enc.txt', 'r') as f:
+    flag_enc = f.read()
+flag = rot13(flag_enc)
+print("The flag is :", flag)
+```
+
+And we can now run the script and solve the challenge!
+
+*More information about [ROT13](https://en.wikipedia.org/wiki/ROT13)*
 
 ---
