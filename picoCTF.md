@@ -1116,7 +1116,7 @@ Nice, challenge finished!
 
 ---
 
- 
+
 
 ## Reverse Engineering
 
@@ -1521,7 +1521,239 @@ Just use the grep or cat command!!!
 
 ---
 
+### ARMssembly 1
 
+This challenge is pretty interesting!
+
+One file is given `chall_1.S` and the goal of the challenge is to find for wich argument does the program print `You win!`.
+
+Let's have a look at the code:
+
+**chall_1.S**
+
+```nasm
+    // ...
+func:
+    // ...
+.LC0:
+    .string    "You win!"
+    .align    3
+.LC1:
+    .string    "You Lose :("
+    .text
+    .align    2
+    .global    main
+    .type    main, %function
+main:
+    stp    x29, x30, [sp, -48]!
+    add    x29, sp, 0
+    str    w0, [x29, 28]
+    str    x1, [x29, 16]
+    ldr    x0, [x29, 16]
+    add    x0, x0, 8
+    ldr    x0, [x0]
+    bl    atoi
+    str    w0, [x29, 44]
+    ldr    w0, [x29, 44]
+    bl    func
+    cmp    w0, 0
+    bne    .L4
+    adrp    x0, .LC0
+    add    x0, x0, :lo12:.LC0
+    bl    puts
+    b    .L6
+.L4:
+    // ...
+.L6:
+    // ...
+```
+
+#### main
+
+Let's analyse the `main` part.
+
+The first part of it do useless things for us, we just know that w0 doesn't change from the input parameter to the call of `func`. 
+
+```nasm
+stp    x29, x30, [sp, -48]!
+add    x29, sp, 0
+str    w0, [x29, 28]
+str    x1, [x29, 16]
+ldr    x0, [x29, 16]
+add    x0, x0, 8
+ldr    x0, [x0]
+bl    atoi
+str    w0, [x29, 44]
+ldr    w0, [x29, 44]
+bl    func
+```
+
+Then it check if `w0` is equal to zero, and if it is not, in go directly to `.L4` and don't go to `.LC0` (where the `You win!` is). So `w0` must be equal to zero afeter the call of `func`.
+
+
+
+#### func
+
+Let's look at the code inside this routine.
+
+```nasm
+func:
+	sub	sp, sp, #32
+	str	w0, [sp, 12]
+	mov	w0, 79
+	str	w0, [sp, 16]
+	mov	w0, 7
+	str	w0, [sp, 20]
+	mov	w0, 3
+	str	w0, [sp, 24]
+	ldr	w0, [sp, 20]
+	ldr	w1, [sp, 16]
+	lsl	w0, w1, w0
+	str	w0, [sp, 28]
+	ldr	w1, [sp, 28]
+	ldr	w0, [sp, 24]
+	sdiv	w0, w1, w0
+	str	w0, [sp, 28]
+	ldr	w1, [sp, 28]
+	ldr	w0, [sp, 12]
+	sub	w0, w1, w0
+	str	w0, [sp, 28]
+	ldr	w0, [sp, 28]
+	add	sp, sp, 32
+	ret
+```
+
+Ok, the function is using the stack pointer `sp` and doing things with w0 and w1. Let's try to understand how this work.
+
+The first line `sub sp, sp, #32` move the stack pointer to `sp` - 32. So the function should use the space here to store values. And then we store 4 values.
+
+```nasm
+str	w0, [sp, 12]
+mov	w0, 79
+str	w0, [sp, 16]
+mov	w0, 7
+str	w0, [sp, 20]
+mov	w0, 3
+str	w0, [sp, 24]
+```
+
+So the stack looks like this:
+
+```mermaid
+gantt
+    dateFormat X
+    axisFormat %s
+    section Stack
+    Stack    : 0, 32
+    w0    : 12, 16
+    79    : 16, 20
+    7     : 20, 24
+    3     : 24, 28
+```
+
+Then two instructions that follow load the value 7 into `w0` and 79 into `w1`.
+
+```nasm
+ldr	w0, [sp, 20]
+ldr	w1, [sp, 16]
+```
+
+`w1` = 79
+
+`w0` = 7
+
+Now the next line operate a bit shift to the left. The new value of `w0` is gonna be `w1` << `w0` so 79 << 7 which is 10112.
+
+```nasm
+lsl	w0, w1, w0
+```
+
+`w0` = 10112
+
+The next three instructions store the value 10112 in the stack and load values from the stack to `w1` and `w0`.
+
+```nasm
+str	w0, [sp, 28]
+ldr	w1, [sp, 28]
+ldr	w0, [sp, 24]
+```
+
+```mermaid
+gantt
+    dateFormat X
+    axisFormat %s
+    section Stack
+    Stack    : 0, 32
+    w0    : 12, 16
+    79    : 16, 20
+    7     : 20, 24
+    3     : 24, 28
+    10112 : 28, 32
+```
+
+`w1` = 10112
+
+`w0` = 3
+
+Now, the next instruction divide `w1` by `w0` and put the value inside `w0`, so 10112/3 = 3370.6666666... I suppose it just take the 3370 into `w0`. 
+
+```nasm
+sdiv w0, w1, w0
+```
+
+`w0` = 3370
+
+Then it store the number into the stack and load other values from the stack to `w1` and `w0`.
+
+```nasm
+str	w0, [sp, 28]
+ldr	w1, [sp, 28]
+ldr	w0, [sp, 12]
+```
+
+```mermaid
+gantt
+    dateFormat X
+    axisFormat %s
+    section Stack
+    Stack    : 0, 32
+    w0    : 12, 16
+    79    : 16, 20
+    7     : 20, 24
+    3     : 24, 28
+    3370  : 28, 32
+```
+
+`w0` = `w0`(original value)
+
+`w1` = 3370
+
+Now the next instruction put `w1` - `w0` into `w0`.
+
+```nasm
+sub	w0, w1, w0
+```
+
+`w0` = 3370 - `w0`(original value)
+
+Then the rest of the function don't change `w0`, this mean that we now know what `w0` is equal after the a call to `func`.
+
+#### end the challenge
+
+We are now here, after the call to `func`.
+
+```nasm
+bl    func
+cmp    w0, 0
+bne    .L4
+adrp    x0, .LC0
+```
+
+So remember, we had to get  `w0` equal to zero, and since after the call to `func` `w0` = 3370 - `w0`(original value), we found that `w0` must be equal to 3370 to get `You win!` printed. We have to convert it to hexa and we got the flag!
+
+---
+
+ 
 
 ## Cryptography
 
@@ -1538,22 +1770,19 @@ def rot13(s):
     result = ""
     for v in s:
         c = ord(v)
-
         if c >= ord('a') and c <= ord('z'):
             if c > ord('m'):
                 c -= 13
             else:
                 c += 13
-
         elif c >= ord('A') and c <= ord('Z'):
             if c > ord('M'):
                 c -= 13
             else:
                 c += 13
-
         result += chr(c)
-
     return result
+
 # The encrypted flag is in the "flag.enc.txt" file
 with open('flag.enc.txt', 'r') as f:
     flag_enc = f.read()
